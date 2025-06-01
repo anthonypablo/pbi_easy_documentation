@@ -1,0 +1,144 @@
+createOrReplace
+
+	table 'Catálogo de Dados'
+
+
+		column Categoria
+
+			summarizeBy: none
+			isNameInferred
+			sourceColumn: [Categoria]
+
+			annotation SummarizationSetBy = Automatic
+
+		column Nome
+
+			summarizeBy: none
+			isNameInferred
+			sourceColumn: [Nome]
+
+			annotation SummarizationSetBy = Automatic
+
+		column Descricao
+
+			summarizeBy: none
+			isNameInferred
+			sourceColumn: [Descricao]
+
+			annotation SummarizationSetBy = Automatic
+
+		column Origem
+
+			summarizeBy: none
+			isNameInferred
+			sourceColumn: [Origem]
+
+			annotation SummarizationSetBy = Automatic
+
+		column Expressao
+
+			summarizeBy: none
+			isNameInferred
+			sourceColumn: [Expressao]
+
+			annotation SummarizationSetBy = Automatic
+
+		column 'Lineage Tag'
+
+			summarizeBy: none
+			isNameInferred
+			sourceColumn: [Lineage Tag]
+
+			annotation SummarizationSetBy = Automatic
+
+		column Tipo
+
+			summarizeBy: none
+			isNameInferred
+			sourceColumn: [Tipo]
+
+			annotation SummarizationSetBy = Automatic
+
+		partition 'Catálogo de Dados' = calculated
+			mode: import
+			source =
+					
+					VAR colunas =
+					    SELECTCOLUMNS (
+					        FILTER (
+					            INFO.VIEW.COLUMNS (),
+					            [Table] <> "Catálogo de Dados"
+					                && NOT ( [IsHidden] )
+					        ),
+					        "Categoria", "Coluna",
+					        "Nome", [Name],
+					        "Descricao", IF(
+					                        [IsKey],
+					                        "Coluna chave de relacionamento.",
+					                        ""
+					                    ) & [Description],
+					        "Tipo", [DataType] & " - " & [DataCategory],
+					        "Origem", [Table],
+					        "Expressao", [Expression],
+					        "Lineage Tag", [LineageTag]
+					    )
+					VAR medidas =
+					    SELECTCOLUMNS (
+					        FILTER (
+					            INFO.VIEW.MEASURES (),
+					            [Table] <> "Catálogo de Dados"
+					                && NOT ( [IsHidden] )
+					        ),
+					        "Categoria", "Medida",
+					        "Nome", [Name],
+					        "Descricao", [Description],
+					        "Tipo", [FormatStringDefinition],
+					        "Origem", [Table],
+					        "Expressao", [Expression],
+					        "Lineage Tag", [LineageTag]
+					    )
+					VAR tabelas =
+					    SELECTCOLUMNS (
+					        FILTER (
+					            INFO.VIEW.TABLES (),
+					            [Name] <> "Catálogo de Dados"
+					                && [Name] <> "Calculations"
+					                && NOT ( [IsHidden] )
+					        ),
+					        "Categoria", "Tabela",
+					        "Nome", [Name],
+					        "Descricao", [Description],
+					        "Tipo", SWITCH (
+					                TRUE (),
+					                NOT (ISBLANK ( [Expression] )), "Tabela calculada",
+					                "Tabela de dados"
+					            ),
+					        "Origem",[StorageMode],
+					        "Expressao", [Expression],
+					        "Lineage Tag", [LineageTag]
+					    )
+					VAR relacionamentos =
+					    SELECTCOLUMNS (
+					        INFO.VIEW.RELATIONSHIPS (),
+					        "Categoria", "Relacionamento",
+					        "Nome", [Relationship],
+					        "Descricao", IF(
+					                        [IsActive],
+					                        "Relacionamento Ativo.",
+					                        "Relacionamento Inativo."
+					                    ),
+					        "Tipo", [FromCardinality] & " To " & [ToCardinality] & " - " & [CrossFilteringBehavior],
+					        "Origem",
+					            "De: " & [FromTable] & "    Para: " & [ToTable],
+					        "Expressao", BLANK (),
+					        "Lineage Tag", [Name]
+					    )
+					RETURN
+					    UNION (
+					        colunas,
+					        medidas,
+					        tabelas,
+					        relacionamentos
+					    )
+
+		annotation PBI_Id = 47579e863f794d81a4bec41c3a485acc
